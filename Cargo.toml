@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "karma-p2p",
+    "karma-p2p-webrtc",
+    "karma-p2p-wasm",
+]
