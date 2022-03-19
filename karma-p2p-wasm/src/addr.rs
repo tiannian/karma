@@ -20,4 +20,5 @@ pub struct IceServer {
 pub enum WebrtcAddr {
     Bootstrap(Vec<IceServer>),
     SDP,
+    Label(String),
 }

@@ -28,7 +28,15 @@ impl WebrtcSocket {
     }
 
     async fn connect(&self, label: WebrtcAddr) -> Result<WebrtcStream> {
-        Ok(WebrtcStream {})
+        if let WebrtcAddr::Label(label) = label {
+            let dc = self.pc.create_data_channel(&label);
+
+            // let
+
+            Ok(WebrtcStream { dc })
+        } else {
+            Err(Error::ErrAddrType)
+        }
     }
 }
 

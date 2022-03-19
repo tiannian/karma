@@ -1,12 +1,17 @@
 use std::{
     pin::Pin,
-    task::{Context, Poll},
+    task::{Context, Poll}, rc::Rc, cell::RefCell,
 };
 
 use futures_lite::{AsyncRead, AsyncWrite};
 use karma_p2p::P2pStream;
+use wasm_bindgen::JsValue;
+use web_sys::RtcDataChannel;
 
-pub struct WebrtcStream {}
+pub struct WebrtcStream {
+    pub(crate) dc: RtcDataChannel,
+    pub(crate) recv_buffer: Rc<RefCell<Vec<JsValue>>>
+}
 
 impl AsyncRead for WebrtcStream {
     fn poll_read(
