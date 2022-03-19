@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::P2pStream;
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait P2pSocket: Sized {
     type Stream: P2pStream;
 

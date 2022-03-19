@@ -62,7 +62,8 @@ impl P2pSocket for WebrtcSocket {
                 }
 
                 Box::pin(async move {})
-            })).await;
+            }))
+            .await;
 
             let atc = addr_tx.clone();
 
@@ -78,7 +79,8 @@ impl P2pSocket for WebrtcSocket {
                         }
                     }
                 })
-            })).await;
+            }))
+            .await;
 
             let s = Self {
                 pc: Arc::new(pc),
@@ -113,7 +115,8 @@ impl P2pSocket for WebrtcSocket {
                     log::error!("Got error when send data: {:?}", e);
                 }
                 Box::pin(async move {})
-            })).await;
+            }))
+            .await;
             Ok(WebrtcStream { dc, data_rx })
         } else {
             Err(Error::ErrAddrType)
@@ -130,7 +133,8 @@ impl P2pSocket for WebrtcSocket {
                 log::error!("Got error when send data: {:?}", e);
             }
             Box::pin(async move {})
-        })).await;
+        }))
+        .await;
 
         Ok(Self::Stream { dc, data_rx })
     }

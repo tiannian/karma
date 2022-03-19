@@ -22,8 +22,8 @@ impl AsyncRead for WebrtcStream {
                 Ok(b) => {
                     buf.copy_from_slice(&b);
                     Ok(b.len())
-                },
-                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+                }
+                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
             }
         });
         fu.poll(cx)
@@ -39,7 +39,10 @@ impl AsyncWrite for WebrtcStream {
         let mut fu = Box::pin(async {
             let bytes = Bytes::copy_from_slice(buf);
 
-            self.dc.send(&bytes).await.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            self.dc
+                .send(&bytes)
+                .await
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
         });
 
         fu.poll(cx)
@@ -57,7 +60,10 @@ impl AsyncWrite for WebrtcStream {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<std::io::Result<()>> {
         let mut fu = Box::pin(async {
-            self.dc.close().await.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            self.dc
+                .close()
+                .await
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
         });
 
         fu.poll(cx)
