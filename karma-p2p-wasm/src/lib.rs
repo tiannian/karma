@@ -6,3 +6,6 @@ pub use stream::*;
 
 mod addr;
 pub use addr::*;
+
+mod error;
+pub use error::*;

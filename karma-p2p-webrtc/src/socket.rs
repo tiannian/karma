@@ -1,6 +1,10 @@
-use std::sync::Arc;
+use std::{
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+};
 
-use async_trait::async_trait;
+use futures_lite::FutureExt;
 use karma_p2p::P2pSocket;
 use smol::channel::{unbounded, Receiver, Sender};
 use webrtc::{
@@ -21,14 +25,7 @@ pub struct WebrtcSocket {
     addr_rx: Receiver<WebrtcAddr>,
 }
 
-#[async_trait]
-impl P2pSocket for WebrtcSocket {
-    type Addr = WebrtcAddr;
-
-    type Stream = WebrtcStream;
-
-    type Error = Error;
-
+impl WebrtcSocket {
     async fn bind(bootstrap: WebrtcAddr) -> Result<Self> {
         let mut m = MediaEngine::default();
 
@@ -106,7 +103,7 @@ impl P2pSocket for WebrtcSocket {
         }
     }
 
-    async fn connect(&self, label: WebrtcAddr) -> Result<Self::Stream> {
+    async fn connect(&self, label: WebrtcAddr) -> Result<WebrtcStream> {
         if let WebrtcAddr::Label(s) = label {
             let dc = self.pc.create_data_channel(&s, None).await?;
             let (data_tx, data_rx) = unbounded();
@@ -123,7 +120,7 @@ impl P2pSocket for WebrtcSocket {
         }
     }
 
-    async fn accept(&self) -> Result<Self::Stream> {
+    async fn accept(&self) -> Result<WebrtcStream> {
         let dc = self.dc_rx.recv().await?;
 
         let (data_tx, data_rx) = unbounded();
@@ -136,15 +133,15 @@ impl P2pSocket for WebrtcSocket {
         }))
         .await;
 
-        Ok(Self::Stream { dc, data_rx })
+        Ok(WebrtcStream { dc, data_rx })
     }
 
-    async fn fetch_local_addr(&self) -> Result<Self::Addr> {
+    async fn fetch_local_addr(&self) -> Result<WebrtcAddr> {
         let addr = self.addr_rx.recv().await?;
         Ok(addr)
     }
 
-    async fn set_remote_addr(&self, remote: Self::Addr) -> Result<()> {
+    async fn set_remote_addr(&self, remote: WebrtcAddr) -> Result<()> {
         match remote {
             WebrtcAddr::SDP(s) => {
                 self.pc.set_remote_description(s).await?;
@@ -154,5 +151,29 @@ impl P2pSocket for WebrtcSocket {
         }
 
         Ok(())
+    }
+}
+
+impl P2pSocket for WebrtcSocket {
+    type Addr = WebrtcAddr;
+
+    type Stream = WebrtcStream;
+
+    type Error = Error;
+
+    fn poll_bind(cx: &mut Context<'_>, bootstrap: Self::Addr) -> Poll<Result<Self>> {
+        let mut fu = Box::pin(async move { WebrtcSocket::bind(bootstrap).await });
+
+        fu.poll(cx)
+    }
+
+    fn poll_connect(
+        self: Pin<&Self>,
+        cx: &mut Context<'_>,
+        label: Self::Addr,
+    ) -> Poll<Result<Self::Stream>> {
+        let mut fu = Box::pin(async move { self.connect(label).await });
+
+        fu.poll(cx)
     }
 }

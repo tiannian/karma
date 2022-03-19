@@ -1,39 +1,53 @@
-use async_trait::async_trait;
+use std::task::{Context, Poll};
+
+use futures_lite::FutureExt;
 use karma_p2p::P2pSocket;
 use wasm_bindgen::JsValue;
-use web_sys::RtcPeerConnection;
+use web_sys::{RtcConfiguration, RtcPeerConnection};
 
-use crate::{Addr, WebrtcStream};
+use crate::{Error, Result, WebrtcAddr, WebrtcStream};
 
 pub struct WebrtcSocket {
     pc: RtcPeerConnection,
 }
 
-#[async_trait(?Send)]
+impl WebrtcSocket {
+    async fn bind(bootstrap: WebrtcAddr) -> Result<Self> {
+        if let WebrtcAddr::Bootstrap(addr) = bootstrap {
+            let ice_servers = JsValue::from_serde(&addr)?;
+
+            let mut config = RtcConfiguration::new();
+            config.ice_servers(&ice_servers);
+
+            let pc = RtcPeerConnection::new_with_configuration(&config)?;
+
+            Ok(WebrtcSocket { pc })
+        } else {
+            Err(Error::ErrAddrType)
+        }
+    }
+
+    async fn connect(&self, label: WebrtcAddr) -> Result<WebrtcStream> {
+        Ok(WebrtcStream {})
+    }
+}
+
 impl P2pSocket for WebrtcSocket {
-    type Error = JsValue;
+    type Error = Error;
 
     type Stream = WebrtcStream;
 
-    type Addr = Addr;
+    type Addr = WebrtcAddr;
 
-    async fn bind(bootstrap: Self::Addr) -> Result<Self, Self::Error> {
-        Ok(Self {})
+    fn poll_bind(cx: &mut Context<'_>, bootstrap: Self::Addr) -> Poll<Result<Self>> {
+        let mut fu = Box::pin(async move { WebrtcSocket::bind(bootstrap).await });
+
+        fu.poll(cx)
     }
 
-    async fn connect(&self, label: Self::Addr) -> Result<Self::Stream, Self::Error> {
-        Ok(Self::Stream {})
+    fn poll_connect(self: std::pin::Pin<&Self>, cx: &mut Context<'_>, label: Self::Addr) -> Poll<Result<Self::Stream>> {
+        let mut fu = Box::pin(async move { self.connect(label).await });
+
+        fu.poll(cx)
     }
-
-    async fn start(&self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    async fn accept(&self) -> Result<Self::Stream, Self::Error> {
-        Ok(Self::Stream {})
-    }
-
-    async fn fetch_local_addr(&self) -> Result<Self::Addr, Self::Error> {}
-
-    async fn set_remote_addr(&self, remote: Self::Addr) -> Result<(), Self::Error> {}
 }

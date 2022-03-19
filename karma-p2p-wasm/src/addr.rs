@@ -17,6 +17,7 @@ pub struct IceServer {
     pub username: String,
 }
 
-pub enum Addr {
-    Bootstrap(IceServer),
+pub enum WebrtcAddr {
+    Bootstrap(Vec<IceServer>),
+    SDP,
 }

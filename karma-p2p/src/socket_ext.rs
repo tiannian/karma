@@ -1,22 +1,16 @@
-use std::{task::{Context, Poll}, pin::Pin};
+use crate::{futures::{BindFuture, ConnectFuture}, P2pSocket};
 
-use futures_lite::Future;
+pub trait P2pSocketExt: P2pSocket {
+    fn bind(bootstrap: Self::Addr) -> BindFuture<Self> {
+        BindFuture {
+            arg: Some(bootstrap),
+        }
+    }
 
-use crate::P2pSocket;
-
-pub trait P2pSocketExt {}
-
-pub struct Bind<T: P2pSocket> {
-    arg: T::Addr,
-}
-
-impl<T: P2pSocket> Future for Bind<T> {
-    type Output = Result<T, T::Error>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let Self { arg } = *self;
-
-        T::poll_bind(cx, arg)
+    fn connect(&self, label: Self::Addr) -> ConnectFuture<'_, Self> {
+        ConnectFuture {
+            socket: self,
+            label: Some(label)
+        }
     }
 }
-
