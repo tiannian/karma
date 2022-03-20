@@ -124,6 +124,8 @@ impl WebrtcSocket {
             WebrtcAddr::SDP(s) => {
                 self.pc.set_remote_description(s).await?;
                 let sdp = self.pc.create_answer(None).await?;
+                self.pc.set_local_description(sdp.clone()).await?;
+
                 if let Err(e) = self.addr_tx.send(WebrtcAddr::SDP(sdp)).await {
                     log::error!("send {:?}", e);
                     return Err(Error::ErrChannelClosed)

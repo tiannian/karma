@@ -27,6 +27,18 @@ impl Default for AddressFutureInner {
     }
 }
 
+impl AddressFutureInner {
+    pub fn set_addr(&mut self, addr: WebrtcAddr) {
+        self.address.push_back(addr);
+
+        let waker = mem::replace(&mut self.waker, None);
+
+        if let Some(waker) = waker {
+            waker.wake();
+        }
+    }
+}
+
 pub struct WebrtcSocket {
     pc: RtcPeerConnection,
     inner: Rc<RefCell<AddressFutureInner>>,
@@ -53,13 +65,8 @@ impl WebrtcSocket {
                         {
                             let mut re = inner.borrow_mut();
                             let addr = WebrtcAddr::ICE(candidate);
-                            re.address.push_back(addr);
 
-                            let waker = mem::replace(&mut re.waker, None);
-
-                            if let Some(waker) = waker {
-                                waker.wake();
-                            }
+                            re.set_addr(addr);
                         }
                     }
                 }) as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
@@ -83,12 +90,10 @@ impl WebrtcSocket {
 
             let dc = self.pc.create_data_channel_with_data_channel_dict(&label, &dc_init);
 
-//             let on_message =
-            //     Closure::wrap(Box::new(move |ev: MessageEvent| {}) as Box<dyn FnMut(MessageEvent)>);
-            //
-            // dc.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
-//
-            Ok(WebrtcStream { dc })
+            let ws = WebrtcStream::new(dc);
+            ws.init();
+
+            Ok(ws)
         } else {
             Err(Error::ErrAddrType)
         }
@@ -96,6 +101,7 @@ impl WebrtcSocket {
 
     async fn start(&mut self) -> Result<()> {
         let offer = JsFuture::from(self.pc.create_offer()).await?;
+
         let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))?.as_string().unwrap();
 
         let mut offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
@@ -106,13 +112,8 @@ impl WebrtcSocket {
         let addr = WebrtcAddr::SDP(offer_obj);
         {
             let mut re = self.inner.borrow_mut();
-            re.address.push_back(addr);
 
-            let waker = mem::replace(&mut re.waker, None);
-
-            if let Some(waker) = waker {
-                waker.wake();
-            }
+            re.set_addr(addr);
         }
 
         Ok(())
@@ -122,9 +123,20 @@ impl WebrtcSocket {
         match remote {
             WebrtcAddr::SDP(s) => {
                 JsFuture::from(self.pc.set_remote_description(&s)).await?;
+
+                let answer = JsFuture::from(self.pc.create_answer()).await?;
+
+                let sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))?.as_string().unwrap();
+
+                let mut obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
+                obj.sdp(&sdp);
+
+                JsFuture::from(self.pc.set_local_description(&obj)).await?;
             }
-            WebrtcAddr::ICE(ice) => {},
-            _ => {}
+            WebrtcAddr::ICE(ice) => {
+                JsFuture::from(self.pc.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&ice))).await?;
+            },
+            _ => return Err(Error::ErrAddrType)
         }
 
         Ok(())
