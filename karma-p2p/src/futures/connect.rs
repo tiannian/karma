@@ -11,6 +11,7 @@ use crate::P2pSocket;
 pub struct ConnectFuture<'a, T: P2pSocket> {
     pub socket: &'a T,
     pub label: Option<T::Addr>,
+    pub port: u16,
 }
 
 impl<'a, T> Future for ConnectFuture<'a, T>
@@ -26,6 +27,6 @@ where
         let opt_label = mem::replace(&mut this.label, None);
         let socket = &*this.socket;
 
-        Pin::new(socket).poll_connect(cx, opt_label.unwrap())
+        Pin::new(socket).poll_connect(cx, opt_label.unwrap(), this.port)
     }
 }

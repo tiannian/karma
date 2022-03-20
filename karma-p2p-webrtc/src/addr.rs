@@ -3,10 +3,16 @@ use webrtc::{
     peer_connection::sdp::session_description::RTCSessionDescription,
 };
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum WebrtcAddr {
+    #[serde(skip)]
     Bootstrap(Vec<RTCIceServer>),
+
+    #[serde(skip)]
+    Label(String),
+
     SDP(RTCSessionDescription),
     ICE(RTCIceCandidateInit),
-    Label(String),
 }

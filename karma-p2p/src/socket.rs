@@ -23,19 +23,14 @@ pub trait P2pSocket: Sized {
         self: Pin<&Self>,
         cx: &mut Context<'_>,
         label: Self::Addr,
+        port: u16,
     ) -> Poll<Result<Self::Stream, Self::Error>>;
 
-    fn poll_start(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>>;
-
-    /// Accept p2p connection and get p2p stream;
-    fn poll_accept(
-        self: Pin<&Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<Self::Stream, Self::Error>>;
+    fn poll_start(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>>;
 
     /// Get local address.
     fn poll_fetch_local_addr(
-        self: Pin<&Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<Self::Addr, Self::Error>>;
 

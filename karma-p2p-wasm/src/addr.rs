@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use web_sys::{RtcSessionDescriptionInit, RtcIceCandidate};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CredentialType {
@@ -19,6 +20,7 @@ pub struct IceServer {
 
 pub enum WebrtcAddr {
     Bootstrap(Vec<IceServer>),
-    SDP,
+    SDP(RtcSessionDescriptionInit),
+    ICE(RtcIceCandidate),
     Label(String),
 }

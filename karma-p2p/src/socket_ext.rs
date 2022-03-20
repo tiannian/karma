@@ -1,6 +1,6 @@
 use crate::{
     futures::{
-        AcceptFuture, BindFuture, ConnectFuture, FetchLocalAddrFuture, SetRemoteAddr, StartFuture,
+        BindFuture, ConnectFuture, FetchLocalAddrFuture, SetRemoteAddr, StartFuture,
     },
     P2pSocket,
 };
@@ -12,22 +12,19 @@ pub trait P2pSocketExt: P2pSocket {
         }
     }
 
-    fn connect(&self, label: Self::Addr) -> ConnectFuture<'_, Self> {
+    fn connect(&self, label: Self::Addr, port: u16) -> ConnectFuture<'_, Self> {
         ConnectFuture {
             socket: self,
             label: Some(label),
+            port
         }
     }
 
-    fn start(&self) -> StartFuture<'_, Self> {
+    fn start(&mut self) -> StartFuture<'_, Self> {
         StartFuture { socket: self }
     }
 
-    fn accept(&self) -> AcceptFuture<'_, Self> {
-        AcceptFuture { socket: self }
-    }
-
-    fn fetch_local_addr(&self) -> FetchLocalAddrFuture<'_, Self> {
+    fn fetch_local_addr(&mut self) -> FetchLocalAddrFuture<'_, Self> {
         FetchLocalAddrFuture { socket: self }
     }
 

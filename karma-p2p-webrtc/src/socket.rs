@@ -11,16 +11,14 @@ use webrtc::{
     api::{
         interceptor_registry::register_default_interceptors, media_engine::MediaEngine, APIBuilder,
     },
-    data_channel::RTCDataChannel,
     interceptor::registry::Registry,
-    peer_connection::{configuration::RTCConfiguration, RTCPeerConnection},
+    peer_connection::{configuration::RTCConfiguration, RTCPeerConnection}, data_channel::data_channel_init::RTCDataChannelInit,
 };
 
 use crate::{Error, Result, WebrtcAddr, WebrtcStream};
 
 pub struct WebrtcSocket {
     pc: Arc<RTCPeerConnection>,
-    dc_rx: Receiver<Arc<RTCDataChannel>>,
     addr_tx: Sender<WebrtcAddr>,
     addr_rx: Receiver<WebrtcAddr>,
 }
@@ -48,19 +46,7 @@ impl WebrtcSocket {
                 })
                 .await?;
 
-            let (dc_tx, dc_rx) = unbounded();
             let (addr_tx, addr_rx) = unbounded();
-
-            pc.on_data_channel(Box::new(move |d| {
-                log::debug!("Receive data channel {} from remote", d.label());
-
-                if let Err(e) = dc_tx.try_send(d) {
-                    log::error!("Got error when send data channel: {:?}", e);
-                }
-
-                Box::pin(async move {})
-            }))
-            .await;
 
             let atc = addr_tx.clone();
 
@@ -81,7 +67,6 @@ impl WebrtcSocket {
 
             let s = Self {
                 pc: Arc::new(pc),
-                dc_rx,
                 addr_tx: atc,
                 addr_rx,
             };
@@ -103,10 +88,18 @@ impl WebrtcSocket {
         }
     }
 
-    async fn connect(&self, label: WebrtcAddr) -> Result<WebrtcStream> {
+    async fn connect(&self, label: WebrtcAddr, port: u16) -> Result<WebrtcStream> {
         if let WebrtcAddr::Label(s) = label {
-            let dc = self.pc.create_data_channel(&s, None).await?;
+            let dc_init = RTCDataChannelInit {
+                id: Some(port),
+                negotiated: Some(true),
+                .. Default::default()
+            };
+
+            let dc = self.pc.create_data_channel(&s, Some(dc_init)).await?;
+
             let (data_tx, data_rx) = unbounded();
+
             dc.on_message(Box::new(move |m| {
                 if let Err(e) = data_tx.try_send(m.data) {
                     log::error!("Got error when send data: {:?}", e);
@@ -114,26 +107,11 @@ impl WebrtcSocket {
                 Box::pin(async move {})
             }))
             .await;
+
             Ok(WebrtcStream { dc, data_rx })
         } else {
             Err(Error::ErrAddrType)
         }
-    }
-
-    async fn accept(&self) -> Result<WebrtcStream> {
-        let dc = self.dc_rx.recv().await?;
-
-        let (data_tx, data_rx) = unbounded();
-
-        dc.on_message(Box::new(move |m| {
-            if let Err(e) = data_tx.try_send(m.data) {
-                log::error!("Got error when send data: {:?}", e);
-            }
-            Box::pin(async move {})
-        }))
-        .await;
-
-        Ok(WebrtcStream { dc, data_rx })
     }
 
     async fn fetch_local_addr(&self) -> Result<WebrtcAddr> {
@@ -145,6 +123,11 @@ impl WebrtcSocket {
         match remote {
             WebrtcAddr::SDP(s) => {
                 self.pc.set_remote_description(s).await?;
+                let sdp = self.pc.create_answer(None).await?;
+                if let Err(e) = self.addr_tx.send(WebrtcAddr::SDP(sdp)).await {
+                    log::error!("send {:?}", e);
+                    return Err(Error::ErrChannelClosed)
+                }
             }
             WebrtcAddr::ICE(i) => self.pc.add_ice_candidate(i).await?,
             _ => return Err(Error::ErrAddrType),
@@ -171,25 +154,20 @@ impl P2pSocket for WebrtcSocket {
         self: Pin<&Self>,
         cx: &mut Context<'_>,
         label: Self::Addr,
+        port: u16,
     ) -> Poll<Result<Self::Stream>> {
-        let mut fu = Box::pin(async move { self.connect(label).await });
+        let mut fu = Box::pin(async move { self.connect(label, port).await });
 
         fu.poll(cx)
     }
 
-    fn poll_start(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+    fn poll_start(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         let mut fu = Box::pin(async move { self.start().await });
 
         fu.poll(cx)
     }
 
-    fn poll_accept(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Stream>> {
-        let mut fu = Box::pin(async move { self.accept().await });
-
-        fu.poll(cx)
-    }
-
-    fn poll_fetch_local_addr(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Addr>> {
+    fn poll_fetch_local_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Addr>> {
         let mut fu = Box::pin(async move { self.fetch_local_addr().await });
 
         fu.poll(cx)
