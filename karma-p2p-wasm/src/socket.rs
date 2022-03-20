@@ -1,4 +1,7 @@
-use std::task::{Context, Poll};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use futures_lite::FutureExt;
 use karma_p2p::P2pSocket;
@@ -53,9 +56,33 @@ impl P2pSocket for WebrtcSocket {
         fu.poll(cx)
     }
 
-    fn poll_connect(self: std::pin::Pin<&Self>, cx: &mut Context<'_>, label: Self::Addr) -> Poll<Result<Self::Stream>> {
+    fn poll_connect(
+        self: std::pin::Pin<&Self>,
+        cx: &mut Context<'_>,
+        label: Self::Addr,
+    ) -> Poll<Result<Self::Stream>> {
         let mut fu = Box::pin(async move { self.connect(label).await });
 
         fu.poll(cx)
+    }
+
+    fn poll_start(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        Poll::Pending
+    }
+
+    fn poll_accept(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Stream>> {
+        Poll::Pending
+    }
+
+    fn poll_fetch_local_addr(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Addr>> {
+        Poll::Pending
+    }
+
+    fn poll_set_remote_addr(
+        self: Pin<&Self>,
+        cx: &mut Context<'_>,
+        remote: Self::Addr,
+    ) -> Poll<Result<()>> {
+        Poll::Pending
     }
 }

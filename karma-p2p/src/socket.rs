@@ -24,15 +24,25 @@ pub trait P2pSocket: Sized {
         cx: &mut Context<'_>,
         label: Self::Addr,
     ) -> Poll<Result<Self::Stream, Self::Error>>;
-    //
-    // async fn start(&self) -> Result<(), Self::Error>;
-    //
-    // /// Accept p2p connection and get p2p stream;
-    // async fn accept(&self) -> Result<Self::Stream, Self::Error>;
-    //
-    // /// Get local address.
-    // async fn fetch_local_addr(&self) -> Result<Self::Addr, Self::Error>;
-    //
-    // /// Set remote address.
-    //     async fn set_remote_addr(&self, remote: Self::Addr) -> Result<(), Self::Error>;
+
+    fn poll_start(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>>;
+
+    /// Accept p2p connection and get p2p stream;
+    fn poll_accept(
+        self: Pin<&Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Self::Stream, Self::Error>>;
+
+    /// Get local address.
+    fn poll_fetch_local_addr(
+        self: Pin<&Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Self::Addr, Self::Error>>;
+
+    /// Set remote address.
+    fn poll_set_remote_addr(
+        self: Pin<&Self>,
+        cx: &mut Context<'_>,
+        remote: Self::Addr,
+    ) -> Poll<Result<(), Self::Error>>;
 }

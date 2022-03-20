@@ -176,4 +176,32 @@ impl P2pSocket for WebrtcSocket {
 
         fu.poll(cx)
     }
+
+    fn poll_start(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        let mut fu = Box::pin(async move { self.start().await });
+
+        fu.poll(cx)
+    }
+
+    fn poll_accept(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Stream>> {
+        let mut fu = Box::pin(async move { self.accept().await });
+
+        fu.poll(cx)
+    }
+
+    fn poll_fetch_local_addr(self: Pin<&Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Addr>> {
+        let mut fu = Box::pin(async move { self.fetch_local_addr().await });
+
+        fu.poll(cx)
+    }
+
+    fn poll_set_remote_addr(
+        self: Pin<&Self>,
+        cx: &mut Context<'_>,
+        remote: Self::Addr,
+    ) -> Poll<Result<()>> {
+        let mut fu = Box::pin(async move { self.set_remote_addr(remote).await });
+
+        fu.poll(cx)
+    }
 }
