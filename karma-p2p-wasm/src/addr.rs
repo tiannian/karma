@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use web_sys::{RtcSessionDescriptionInit, RtcIceCandidate};
+use web_sys::{RtcIceCandidate, RtcSessionDescriptionInit};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CredentialType {

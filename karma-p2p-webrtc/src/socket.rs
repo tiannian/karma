@@ -11,8 +11,9 @@ use webrtc::{
     api::{
         interceptor_registry::register_default_interceptors, media_engine::MediaEngine, APIBuilder,
     },
+    data_channel::data_channel_init::RTCDataChannelInit,
     interceptor::registry::Registry,
-    peer_connection::{configuration::RTCConfiguration, RTCPeerConnection}, data_channel::data_channel_init::RTCDataChannelInit,
+    peer_connection::{configuration::RTCConfiguration, RTCPeerConnection},
 };
 
 use crate::{Error, Result, WebrtcAddr, WebrtcStream};
@@ -93,7 +94,7 @@ impl WebrtcSocket {
             let dc_init = RTCDataChannelInit {
                 id: Some(port),
                 negotiated: Some(true),
-                .. Default::default()
+                ..Default::default()
             };
 
             let dc = self.pc.create_data_channel(&s, Some(dc_init)).await?;
@@ -128,7 +129,7 @@ impl WebrtcSocket {
 
                 if let Err(e) = self.addr_tx.send(WebrtcAddr::SDP(sdp)).await {
                     log::error!("send {:?}", e);
-                    return Err(Error::ErrChannelClosed)
+                    return Err(Error::ErrChannelClosed);
                 }
             }
             WebrtcAddr::ICE(i) => self.pc.add_ice_candidate(i).await?,
@@ -169,7 +170,10 @@ impl P2pSocket for WebrtcSocket {
         fu.poll(cx)
     }
 
-    fn poll_fetch_local_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Addr>> {
+    fn poll_fetch_local_addr(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Self::Addr>> {
         let mut fu = Box::pin(async move { self.fetch_local_addr().await });
 
         fu.poll(cx)

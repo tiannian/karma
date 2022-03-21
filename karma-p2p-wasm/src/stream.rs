@@ -1,12 +1,16 @@
 use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    mem,
     pin::Pin,
-    task::{Context, Poll, Waker}, rc::Rc, cell::RefCell, collections::VecDeque, mem,
+    rc::Rc,
+    task::{Context, Poll, Waker},
 };
 
 use futures_lite::{AsyncRead, AsyncWrite};
 use js_sys::Uint8Array;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::{RtcDataChannel, MessageEvent};
+use web_sys::{MessageEvent, RtcDataChannel};
 
 pub struct ReadFutureInner {
     pub waker: Option<Waker>,
@@ -17,7 +21,7 @@ impl Default for ReadFutureInner {
     fn default() -> Self {
         Self {
             waker: None,
-            data: VecDeque::new()
+            data: VecDeque::new(),
         }
     }
 }
@@ -31,35 +35,33 @@ impl WebrtcStream {
     pub fn new(dc: RtcDataChannel) -> Self {
         Self {
             dc,
-            inner: Rc::new(RefCell::new(Default::default()))
+            inner: Rc::new(RefCell::new(Default::default())),
         }
     }
 }
 
 impl WebrtcStream {
     pub fn init(&self) {
-
         let inner = self.inner.clone();
 
-        let on_message =
-            Closure::wrap(Box::new(move |ev: MessageEvent| {
-                let data = Uint8Array::new(&ev.data());
+        let on_message = Closure::wrap(Box::new(move |ev: MessageEvent| {
+            let data = Uint8Array::new(&ev.data());
 
-                let data_vec = data.to_vec();
+            let data_vec = data.to_vec();
 
-                let mut re = inner.borrow_mut();
+            let mut re = inner.borrow_mut();
 
-                re.data.push_back(data_vec);
+            re.data.push_back(data_vec);
 
-                let waker = mem::replace(&mut re.waker, None);
+            let waker = mem::replace(&mut re.waker, None);
 
-                if let Some(waker) = waker {
-                    waker.wake();
-                }
+            if let Some(waker) = waker {
+                waker.wake();
+            }
+        }) as Box<dyn FnMut(MessageEvent)>);
 
-            }) as Box<dyn FnMut(MessageEvent)>);
-
-        self.dc.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
+        self.dc
+            .set_onmessage(Some(on_message.as_ref().unchecked_ref()));
     }
 
     pub fn write(&self, buf: &[u8]) -> std::io::Result<usize> {

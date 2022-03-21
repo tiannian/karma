@@ -1,7 +1,5 @@
 use crate::{
-    futures::{
-        BindFuture, ConnectFuture, FetchLocalAddrFuture, SetRemoteAddr, StartFuture,
-    },
+    futures::{BindFuture, ConnectFuture, FetchLocalAddrFuture, SetRemoteAddr, StartFuture},
     P2pSocket,
 };
 
@@ -16,7 +14,7 @@ pub trait P2pSocketExt: P2pSocket {
         ConnectFuture {
             socket: self,
             label: Some(label),
-            port
+            port,
         }
     }
 

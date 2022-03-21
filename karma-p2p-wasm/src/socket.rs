@@ -1,7 +1,10 @@
 use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    mem,
     pin::Pin,
-    task::{Context, Poll, Waker}, collections::VecDeque,
-    mem, rc::Rc, cell::RefCell
+    rc::Rc,
+    task::{Context, Poll, Waker},
 };
 
 use futures_lite::FutureExt;
@@ -9,7 +12,10 @@ use js_sys::Reflect;
 use karma_p2p::P2pSocket;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{RtcConfiguration, RtcPeerConnection, RtcDataChannelInit, RtcPeerConnectionIceEvent, RtcSessionDescriptionInit, RtcSdpType};
+use web_sys::{
+    RtcConfiguration, RtcDataChannelInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType,
+    RtcSessionDescriptionInit,
+};
 
 use crate::{Error, Result, WebrtcAddr, WebrtcStream};
 
@@ -58,25 +64,22 @@ impl WebrtcSocket {
 
             let inner_clone = inner.clone();
 
-            let on_ice_candidate = 
-                Closure::wrap(Box::new(move |ev: RtcPeerConnectionIceEvent| {
-                    if let Some(candidate) = ev.candidate() {
-                        let inner = inner_clone.clone();
-                        {
-                            let mut re = inner.borrow_mut();
-                            let addr = WebrtcAddr::ICE(candidate);
+            let on_ice_candidate = Closure::wrap(Box::new(move |ev: RtcPeerConnectionIceEvent| {
+                if let Some(candidate) = ev.candidate() {
+                    let inner = inner_clone.clone();
+                    {
+                        let mut re = inner.borrow_mut();
+                        let addr = WebrtcAddr::ICE(candidate);
 
-                            re.set_addr(addr);
-                        }
+                        re.set_addr(addr);
                     }
-                }) as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
+                }
+            })
+                as Box<dyn FnMut(RtcPeerConnectionIceEvent)>);
 
             pc.set_onicecandidate(Some(on_ice_candidate.as_ref().unchecked_ref()));
 
-            Ok(WebrtcSocket {
-                pc,
-                inner,
-            })
+            Ok(WebrtcSocket { pc, inner })
         } else {
             Err(Error::ErrAddrType)
         }
@@ -88,7 +91,9 @@ impl WebrtcSocket {
 
             dc_init.id(port).negotiated(true);
 
-            let dc = self.pc.create_data_channel_with_data_channel_dict(&label, &dc_init);
+            let dc = self
+                .pc
+                .create_data_channel_with_data_channel_dict(&label, &dc_init);
 
             let ws = WebrtcStream::new(dc);
             ws.init();
@@ -102,7 +107,9 @@ impl WebrtcSocket {
     async fn start(&mut self) -> Result<()> {
         let offer = JsFuture::from(self.pc.create_offer()).await?;
 
-        let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))?.as_string().unwrap();
+        let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))?
+            .as_string()
+            .unwrap();
 
         let mut offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
         offer_obj.sdp(&offer_sdp);
@@ -126,7 +133,9 @@ impl WebrtcSocket {
 
                 let answer = JsFuture::from(self.pc.create_answer()).await?;
 
-                let sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))?.as_string().unwrap();
+                let sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))?
+                    .as_string()
+                    .unwrap();
 
                 let mut obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
                 obj.sdp(&sdp);
@@ -134,9 +143,13 @@ impl WebrtcSocket {
                 JsFuture::from(self.pc.set_local_description(&obj)).await?;
             }
             WebrtcAddr::ICE(ice) => {
-                JsFuture::from(self.pc.add_ice_candidate_with_opt_rtc_ice_candidate(Some(&ice))).await?;
-            },
-            _ => return Err(Error::ErrAddrType)
+                JsFuture::from(
+                    self.pc
+                        .add_ice_candidate_with_opt_rtc_ice_candidate(Some(&ice)),
+                )
+                .await?;
+            }
+            _ => return Err(Error::ErrAddrType),
         }
 
         Ok(())
@@ -175,7 +188,10 @@ impl P2pSocket for WebrtcSocket {
         fu.poll(cx)
     }
 
-    fn poll_fetch_local_addr(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<Self::Addr>> {
+    fn poll_fetch_local_addr(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<Self::Addr>> {
         let mut re = self.inner.borrow_mut();
 
         let _ = mem::replace(&mut re.waker, Some(cx.waker().clone()));
