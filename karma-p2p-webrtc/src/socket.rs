@@ -25,7 +25,7 @@ pub struct WebrtcSocket {
 }
 
 impl WebrtcSocket {
-    async fn bind(bootstrap: WebrtcAddr) -> Result<Self> {
+    async fn _bind(bootstrap: WebrtcAddr) -> Result<Self> {
         let mut m = MediaEngine::default();
 
         m.register_default_codecs()?;
@@ -78,7 +78,7 @@ impl WebrtcSocket {
         }
     }
 
-    async fn start(&self) -> Result<()> {
+    async fn _start(&self) -> Result<()> {
         let sdp = self.pc.create_offer(None).await?;
         self.pc.set_local_description(sdp.clone()).await?;
         if let Err(e) = self.addr_tx.send(WebrtcAddr::SDP(sdp)).await {
@@ -89,7 +89,7 @@ impl WebrtcSocket {
         }
     }
 
-    async fn connect(&self, label: WebrtcAddr, port: u16) -> Result<WebrtcStream> {
+    async fn _connect(&self, label: WebrtcAddr, port: u16) -> Result<WebrtcStream> {
         if let WebrtcAddr::Label(s) = label {
             let dc_init = RTCDataChannelInit {
                 id: Some(port),
@@ -115,12 +115,12 @@ impl WebrtcSocket {
         }
     }
 
-    async fn fetch_local_addr(&self) -> Result<WebrtcAddr> {
+    async fn _fetch_local_addr(&self) -> Result<WebrtcAddr> {
         let addr = self.addr_rx.recv().await?;
         Ok(addr)
     }
 
-    async fn set_remote_addr(&self, remote: WebrtcAddr) -> Result<()> {
+    async fn _set_remote_addr(&self, remote: WebrtcAddr) -> Result<()> {
         match remote {
             WebrtcAddr::SDP(s) => {
                 self.pc.set_remote_description(s).await?;
@@ -148,7 +148,7 @@ impl P2pSocket for WebrtcSocket {
     type Error = Error;
 
     fn poll_bind(cx: &mut Context<'_>, bootstrap: Self::Addr) -> Poll<Result<Self>> {
-        let mut fu = Box::pin(async move { WebrtcSocket::bind(bootstrap).await });
+        let mut fu = Box::pin(async move { WebrtcSocket::_bind(bootstrap).await });
 
         fu.poll(cx)
     }
@@ -159,13 +159,13 @@ impl P2pSocket for WebrtcSocket {
         label: Self::Addr,
         port: u16,
     ) -> Poll<Result<Self::Stream>> {
-        let mut fu = Box::pin(async move { self.connect(label, port).await });
+        let mut fu = Box::pin(async move { self._connect(label, port).await });
 
         fu.poll(cx)
     }
 
     fn poll_start(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        let mut fu = Box::pin(async move { self.start().await });
+        let mut fu = Box::pin(async move { self._start().await });
 
         fu.poll(cx)
     }
@@ -174,7 +174,7 @@ impl P2pSocket for WebrtcSocket {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<Self::Addr>> {
-        let mut fu = Box::pin(async move { self.fetch_local_addr().await });
+        let mut fu = Box::pin(async move { self._fetch_local_addr().await });
 
         fu.poll(cx)
     }
@@ -184,7 +184,7 @@ impl P2pSocket for WebrtcSocket {
         cx: &mut Context<'_>,
         remote: Self::Addr,
     ) -> Poll<Result<()>> {
-        let mut fu = Box::pin(async move { self.set_remote_addr(remote).await });
+        let mut fu = Box::pin(async move { self._set_remote_addr(remote).await });
 
         fu.poll(cx)
     }

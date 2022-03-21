@@ -1,6 +1,6 @@
 [package]
 name = "karma-p2p-wasm"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "webrtc wasm in browser impl of karma."
 license = "MIT"
