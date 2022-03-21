@@ -5,7 +5,6 @@ use std::{
 
 use futures_lite::{AsyncRead, AsyncWrite};
 use js_sys::Uint8Array;
-use karma_p2p::P2pStream;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{RtcDataChannel, MessageEvent};
 
@@ -116,5 +115,3 @@ impl AsyncWrite for WebrtcStream {
         Poll::Ready(Ok(()))
     }
 }
-
-impl P2pStream for WebrtcStream {}

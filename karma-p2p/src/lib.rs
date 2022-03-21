@@ -7,6 +7,9 @@ pub use socket_ext::*;
 mod stream;
 pub use stream::*;
 
+mod stream_ext;
+pub use stream_ext::*;
+
 mod config;
 pub use config::*;
 

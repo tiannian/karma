@@ -2,7 +2,6 @@ use std::{sync::Arc, task::Poll};
 
 use bytes::Bytes;
 use futures_lite::{AsyncRead, AsyncWrite, FutureExt};
-use karma_p2p::P2pStream;
 use smol::channel::Receiver;
 use webrtc::data_channel::RTCDataChannel;
 
@@ -70,4 +69,3 @@ impl AsyncWrite for WebrtcStream {
     }
 }
 
-impl P2pStream for WebrtcStream {}
