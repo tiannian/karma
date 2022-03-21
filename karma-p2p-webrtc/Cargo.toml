@@ -1,6 +1,6 @@
 [package]
 name = "karma-p2p-webrtc"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "webrtc host impl of karma."
 license = "MIT"

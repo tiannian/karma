@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use web_sys::{RtcIceCandidate, RtcSessionDescriptionInit};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum CredentialType {
     #[serde(rename = "password")]
     Password,

@@ -1,5 +1,6 @@
 use wasm_bindgen::JsValue;
 
+#[derive(Debug)]
 pub enum Error {
     ErrAddrType,
     WebsysError(JsValue),
