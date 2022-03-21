@@ -1,6 +1,6 @@
 [package]
 name = "karma-p2p"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "core p2p library for karma."
 license = "MIT"

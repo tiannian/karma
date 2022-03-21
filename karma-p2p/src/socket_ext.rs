@@ -33,3 +33,6 @@ pub trait P2pSocketExt: P2pSocket {
         }
     }
 }
+
+impl<T: P2pSocket> P2pSocketExt for T {}
+
